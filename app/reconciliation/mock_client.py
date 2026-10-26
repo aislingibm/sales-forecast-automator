@@ -9,6 +9,7 @@ from scripts.generate_synthetic_data import (
     generate_base_records,
     generate_mock_sales_cloud_dataset,
     inject_quality_anomalies,
+    get_as_of_date,
     DEFAULT_SEED
 )
 
@@ -55,9 +56,10 @@ class MockSalesCloudClient(SalesSystemClient):
 
         # Generate forecast records with anomalies to derive corresponding mock SoR dataset
         import random
-        base_records = generate_base_records(count=self.row_count, seed=self.seed)
+        as_of = get_as_of_date()
+        base_records = generate_base_records(count=self.row_count, base_date=as_of, seed=self.seed)
         records_today, _ = inject_quality_anomalies(base_records, random.Random(self.seed))
-        sc_records, _ = generate_mock_sales_cloud_dataset(records_today, seed=self.seed)
+        sc_records, _ = generate_mock_sales_cloud_dataset(records_today, seed=self.seed, as_of=as_of)
 
         # Apply optional filters
         if filters:

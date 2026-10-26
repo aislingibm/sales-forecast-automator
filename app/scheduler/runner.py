@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.config import get_settings_config, get_rules_config
 from app.ingestion.loader import ingest_csv_snapshot, get_snapshot_dataframe
@@ -10,14 +10,19 @@ from app.quality.checker import run_quality_checks
 from app.reconciliation.mock_client import MockSalesCloudClient
 from app.reconciliation.live_client import SalesCloudClient
 from app.reconciliation.matcher import reconcile_forecast_with_sales_cloud
-from scripts.generate_synthetic_data import create_snapshots
+from scripts.generate_synthetic_data import (
+    create_snapshots,
+    get_as_of_date,
+    previous_snapshot_date,
+    snapshot_filename,
+)
 
 logger = logging.getLogger("forecast_automator.scheduler")
 
 _scheduler = None
 
 def run_daily_pipeline(
-    snapshot_date: str = "2025-05-15",
+    snapshot_date: str = None,
     outbox_dir: str = None
 ) -> dict:
     """
@@ -29,6 +34,10 @@ def run_daily_pipeline(
     5. Exports Excel report to outbox/
     6. Logs audit recap
     """
+    if not snapshot_date:
+        snapshot_date = get_as_of_date().isoformat()
+    yesterday_date = previous_snapshot_date(snapshot_date)
+
     settings = get_settings_config()
     app_cfg = settings.get("app", {})
     sc_cfg = settings.get("sales_cloud", {})
@@ -41,17 +50,17 @@ def run_daily_pipeline(
     os.makedirs(snapshots_dir, exist_ok=True)
     
     today_csv = os.path.join(snapshots_dir, f"snapshot_{snapshot_date}.csv")
-    yesterday_csv = os.path.join(snapshots_dir, "snapshot_2025-05-14.csv")
+    yesterday_csv = os.path.join(snapshots_dir, snapshot_filename(date.fromisoformat(yesterday_date)))
 
     if not os.path.exists(today_csv) or not os.path.exists(yesterday_csv):
-        create_snapshots(count=2000, output_dir=snapshots_dir)
+        create_snapshots(count=2000, output_dir=snapshots_dir, as_of=date.fromisoformat(snapshot_date))
 
     # Ingest
     ingest_res = ingest_csv_snapshot(today_csv, snapshot_date=snapshot_date)
     
     # Load DataFrames
     df_today = get_snapshot_dataframe(snapshot_date)
-    df_yesterday = get_snapshot_dataframe("2025-05-14")
+    df_yesterday = get_snapshot_dataframe(yesterday_date)
 
     # Quality Checks
     quality_findings = run_quality_checks(df_today=df_today, df_yesterday=df_yesterday)

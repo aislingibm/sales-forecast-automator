@@ -10,9 +10,27 @@ import csv
 import random
 import argparse
 from datetime import date, timedelta
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Optional, Tuple
 
 DEFAULT_SEED = 42
+SIGNING_WINDOW_DAYS = 90
+AS_OF_ENV_VAR = "AS_OF_DATE"
+
+def get_as_of_date() -> date:
+    """
+    Returns the 'today' used for all generated data: AS_OF_DATE (YYYY-MM-DD) if set,
+    otherwise the system date.
+    """
+    override = os.environ.get(AS_OF_ENV_VAR)
+    return date.fromisoformat(override) if override else date.today()
+
+def snapshot_filename(snap_date: date) -> str:
+    return f"snapshot_{snap_date.isoformat()}.csv"
+
+def previous_snapshot_date(snapshot_date: Optional[str] = None) -> str:
+    """ISO date of the day before snapshot_date (or before the as-of date if omitted)."""
+    current = date.fromisoformat(snapshot_date) if snapshot_date else get_as_of_date()
+    return (current - timedelta(days=1)).isoformat()
 
 UT_LEVEL_15_LIST = [
     ("Data Platform", 0.65),
@@ -73,9 +91,12 @@ def _weighted_choice(choices_with_weights: List[Tuple[Any, float]], rng: random.
 
 def generate_base_records(
     count: int = 2000,
-    base_date: date = date(2025, 5, 15),
+    base_date: Optional[date] = None,
     seed: int = DEFAULT_SEED
 ) -> List[Dict[str, Any]]:
+    """Signing dates fall in the SIGNING_WINDOW_DAYS ending on base_date (default: as-of date)."""
+    if base_date is None:
+        base_date = get_as_of_date()
     rng = random.Random(seed)
     records = []
 
@@ -84,7 +105,7 @@ def generate_base_records(
         ut_30_options = UT_LEVEL_30_MAP[ut_15]
         ut_30 = rng.choice(ut_30_options)
         
-        days_offset = rng.randint(0, 89)
+        days_offset = rng.randint(0, SIGNING_WINDOW_DAYS - 1)
         signing_dt = base_date - timedelta(days=days_offset)
         
         cov_num = rng.randint(1, 450)
@@ -163,10 +184,11 @@ def inject_quality_anomalies(records: List[Dict[str, Any]], rng: random.Random) 
 def create_snapshots(
     count: int = 2000,
     seed: int = DEFAULT_SEED,
-    output_dir: str = "data/snapshots"
+    output_dir: str = "data/snapshots",
+    as_of: Optional[date] = None
 ) -> Dict[str, str]:
     """
-    Creates snapshot_yesterday.csv (2025-05-14) and snapshot_today.csv (2025-05-15)
+    Creates snapshot_<as_of - 1 day>.csv and snapshot_<as_of>.csv (as_of defaults to today)
     with intentional day-over-day changes:
     - Added deals in today's snapshot
     - Dropped deals from yesterday's snapshot
@@ -175,10 +197,13 @@ def create_snapshots(
     os.makedirs(output_dir, exist_ok=True)
     rng = random.Random(seed)
 
-    # Base snapshot for today (2025-05-15)
-    records_today = generate_base_records(count=count, base_date=date(2025, 5, 15), seed=seed)
+    today_dt = as_of or get_as_of_date()
+    yesterday_dt = today_dt - timedelta(days=1)
+
+    # Base snapshot for today
+    records_today = generate_base_records(count=count, base_date=today_dt, seed=seed)
     
-    # Yesterday's snapshot (2025-05-14) - derived with slight changes
+    # Yesterday's snapshot - derived with slight changes
     records_yesterday = [dict(r) for r in records_today[: count - 20]]  # 20 deals added today
     
     # Add 10 deals that were only in yesterday (dropped today)
@@ -187,7 +212,7 @@ def create_snapshots(
             "ut_level_30_dscr": "watsonx.data Core",
             "ut_level_15_dscr": "Data Platform",
             "coverage_id": f"COV-008{i:02d}",
-            "signing_date": "2025-05-13",
+            "signing_date": (today_dt - timedelta(days=2)).isoformat(),
             "sales_order_num": f"SO-YEST-{i:04d}",
             "customer_name": f"Dropped Acme Client {i}",
             "saas_acv_usd_at_plan": f"{55000.0 + i*1000:.2f}",
@@ -212,8 +237,8 @@ def create_snapshots(
         "client_sub_type", "signing_category"
     ]
 
-    path_yesterday = os.path.join(output_dir, "snapshot_2025-05-14.csv")
-    path_today = os.path.join(output_dir, "snapshot_2025-05-15.csv")
+    path_yesterday = os.path.join(output_dir, snapshot_filename(yesterday_dt))
+    path_today = os.path.join(output_dir, snapshot_filename(today_dt))
 
     with open(path_yesterday, mode="w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -233,7 +258,8 @@ def create_snapshots(
 
 def generate_mock_sales_cloud_dataset(
     forecast_records: List[Dict[str, Any]],
-    seed: int = DEFAULT_SEED
+    seed: int = DEFAULT_SEED,
+    as_of: Optional[date] = None
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """
     Generates a mock Sales Cloud dataset with deterministic planted variances:
@@ -244,6 +270,7 @@ def generate_mock_sales_cloud_dataset(
     """
     rng = random.Random(seed + 100)
     sc_records = []
+    extra_signing_date = ((as_of or get_as_of_date()) - timedelta(days=5)).isoformat()
     
     # Identify golden deals
     golden_deals = [
@@ -311,7 +338,7 @@ def generate_mock_sales_cloud_dataset(
             "ut_level_30_dscr": "watsonx.data Core",
             "ut_level_15_dscr": "Data Platform",
             "coverage_id": f"COV-0099{i}",
-            "signing_date": "2025-05-10",
+            "signing_date": extra_signing_date,
             "sales_order_num": f"SO-SC-EXTRA-{i:03d}",
             "customer_name": f"Direct Sales Cloud Client {i}",
             "saas_acv_usd_at_plan": f"{75000.0 * i:.2f}",

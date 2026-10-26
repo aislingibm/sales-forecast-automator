@@ -36,4 +36,4 @@ jobs:
 
       - name: Validate Legacy Reference Pivot Parity
         run: |
-          python scripts/reference_pivot.py data/snapshots/snapshot_2025-05-15.csv
+          python scripts/reference_pivot.py "data/snapshots/snapshot_$(date +%F).csv"

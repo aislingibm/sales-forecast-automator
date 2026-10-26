@@ -4,6 +4,15 @@ import openpyxl
 import pandas as pd
 from app.engine.forecast import compute_forecast_from_df
 from scripts.build_legacy_workbook import build_legacy_workbook
+from scripts.generate_synthetic_data import create_snapshots, get_as_of_date, snapshot_filename
+
+def todays_snapshot_path(base_dir: str) -> str:
+    """Path of today's snapshot, generating the snapshot pair if it does not exist yet."""
+    snap_dir = os.path.join(base_dir, "data", "snapshots")
+    path = os.path.join(snap_dir, snapshot_filename(get_as_of_date()))
+    if not os.path.exists(path):
+        create_snapshots(count=2000, output_dir=snap_dir)
+    return path
 
 def load_legacy_workbook_pivot_values(wb_path: str):
     """
@@ -101,7 +110,7 @@ def test_forecast_engine_parity_with_legacy_workbook(tmp_path):
     """
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     legacy_path = os.path.join(base_dir, "legacy", "Daily_Forecast_LEGACY.xlsx")
-    snapshot_path = os.path.join(base_dir, "data", "snapshots", "snapshot_2025-05-15.csv")
+    snapshot_path = todays_snapshot_path(base_dir)
 
     if not os.path.exists(legacy_path):
         build_legacy_workbook(csv_path=snapshot_path, output_path=legacy_path)
@@ -142,7 +151,7 @@ def test_parity_fails_if_excluded_customers_rule_removed(monkeypatch):
     """
     import app.config
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    snapshot_path = os.path.join(base_dir, "data", "snapshots", "snapshot_2025-05-15.csv")
+    snapshot_path = todays_snapshot_path(base_dir)
     legacy_path = os.path.join(base_dir, "legacy", "Daily_Forecast_LEGACY.xlsx")
     legacy_data = load_legacy_workbook_pivot_values(legacy_path)
 
@@ -152,7 +161,7 @@ def test_parity_fails_if_excluded_customers_rule_removed(monkeypatch):
         "ut_level_30_dscr": "watsonx.data Core",
         "ut_level_15_dscr": "Data Platform",
         "coverage_id": "COV-00001",
-        "signing_date": "2025-05-15",
+        "signing_date": get_as_of_date().isoformat(),
         "sales_order_num": "SO-EXCLUDED-01",
         "customer_name": "Acme Test Enterprise 999",
         "saas_acv_usd_at_plan": 50000.0,
@@ -178,7 +187,7 @@ def test_parity_fails_if_manual_adjustments_rule_removed(monkeypatch):
     """
     import app.config
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    snapshot_path = os.path.join(base_dir, "data", "snapshots", "snapshot_2025-05-15.csv")
+    snapshot_path = todays_snapshot_path(base_dir)
     legacy_path = os.path.join(base_dir, "legacy", "Daily_Forecast_LEGACY.xlsx")
     legacy_data = load_legacy_workbook_pivot_values(legacy_path)
 

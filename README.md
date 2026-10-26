@@ -2,6 +2,10 @@
 
 > Automated Sales Forecast Pipeline, Quality Checks & System of Record Reconciliation for the ATX Fall Co-Ops Bobathon.
 
+ZIP FILE FOR SUBMISSION: 
+.../sales-forecast-automator/dist/sales-forecast-automator-submission.zip
+
+
 ## 🎯 Executive Summary
 The **Sales Forecast Automator** eliminates key-person risk, manual workbook refresh overhead, and silent pivot errors by delivering:
 1. **Automated Daily Pipeline**: Ingests snapshot extracts, executes quality audits, reconciles totals against IBM Sales Cloud SoR, and generates legacy-compatible `.xlsx` files into `outbox/`.
@@ -56,6 +60,13 @@ cd forecast-automator
 docker compose up --build -d
 ```
 
+### Synthetic data dates
+Generated signing dates always fall in the 90 days ending on the as-of date (today by default), and snapshots are named `snapshot_<YYYY-MM-DD>.csv` for today and yesterday. Output is deterministic for a given seed and as-of date. Pin the date with `AS_OF_DATE`:
+```bash
+AS_OF_DATE=2026-10-26 python scripts/generate_synthetic_data.py --rows 2000 --seed 42
+# -> data/snapshots/snapshot_2026-10-25.csv, data/snapshots/snapshot_2026-10-26.csv
+```
+
 ---
 
 ## 📊 Verification & Test Results
@@ -73,7 +84,7 @@ All test suites run deterministically and provide comprehensive coverage across 
 | [`test_scheduler.py`](tests/test_scheduler.py) | Automated daily headless outbox generation | ✅ PASS |
 | [`test_performance.py`](tests/test_performance.py) | Sub-2-second response on 50,000 synthetic rows (<0.15s actual) | ✅ PASS |
 
-**Test Coverage**: **89%** on core application logic.
+**Test Coverage**: **92%** on core application logic.
 
 ---
 

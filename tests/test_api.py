@@ -1,9 +1,17 @@
 import pytest
+from datetime import timedelta
 from starlette.testclient import TestClient
+from scripts.generate_synthetic_data import get_as_of_date
 
 def test_api_endpoints():
     from app.main import app
-    client = TestClient(app)
+    # Context manager runs the startup lifespan, which seeds and ingests today's snapshot
+    with TestClient(app) as client:
+        _exercise_api(client)
+
+def _exercise_api(client):
+    date_to = get_as_of_date()
+    date_from = date_to - timedelta(days=90)
 
     # 1. Health
     res_health = client.get("/health")
@@ -11,7 +19,7 @@ def test_api_endpoints():
     assert res_health.json()["status"] == "healthy"
 
     # 2. Forecast default & custom filters + group_by + date ranges
-    res_forecast = client.get("/forecast?country=United%20States&client_sub_type=Select%20T%20Activate&signing_category=New%20Signings&ut_level_15=Data%20Platform&group_by=week&date_from=2025-01-01&date_to=2025-06-01")
+    res_forecast = client.get(f"/forecast?country=United%20States&client_sub_type=Select%20T%20Activate&signing_category=New%20Signings&ut_level_15=Data%20Platform&group_by=week&date_from={date_from.isoformat()}&date_to={date_to.isoformat()}")
     assert res_forecast.status_code == 200
     data = res_forecast.json()
     assert "summary" in data

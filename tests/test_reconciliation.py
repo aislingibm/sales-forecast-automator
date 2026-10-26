@@ -3,7 +3,7 @@ import pandas as pd
 from app.reconciliation.mock_client import MockSalesCloudClient
 from app.reconciliation.live_client import SalesCloudClient
 from app.reconciliation.matcher import reconcile_forecast_with_sales_cloud
-from scripts.generate_synthetic_data import create_snapshots
+from scripts.generate_synthetic_data import create_snapshots, get_as_of_date
 
 def test_dormant_live_client():
     """Verify live client is dormant and raises error without approval."""
@@ -51,7 +51,7 @@ def test_reconciliation_retry_with_backoff():
             "sales_order_num": "SO-000001",
             "coverage_id": "COV-00001",
             "saas_acv_usd_at_plan": 50000.0,
-            "signing_date": "2025-05-15",
+            "signing_date": get_as_of_date().isoformat(),
             "country": "United States",
             "client_sub_type": "Select T Activate",
             "signing_category": "New Signings",

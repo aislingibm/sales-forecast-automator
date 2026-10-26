@@ -31,9 +31,15 @@ To regenerate the synthetic snapshot files and mock System of Record data with n
 python scripts/generate_synthetic_data.py --rows 2000 --seed 42 --outdir data/snapshots
 ```
 
-To run the independent baseline reference pivot script:
+Signing dates are generated in the 90 days ending on the "as-of" date (today by default), and snapshots are named `snapshot_<YYYY-MM-DD>.csv` for the as-of date and the day before. The seed is deterministic, so the same seed produces the same data shifted to the as-of date. To generate data for a specific date, set `AS_OF_DATE`:
 ```bash
-python scripts/reference_pivot.py data/snapshots/snapshot_2025-05-15.csv
+AS_OF_DATE=2026-10-26 python scripts/generate_synthetic_data.py --rows 2000 --seed 42 --outdir data/snapshots
+```
+The app, scheduler, API, and mock Sales Cloud client honor the same `AS_OF_DATE` variable, so set it consistently when running them against a fixed date.
+
+To run the independent baseline reference pivot script (defaults to today's snapshot when no path is given):
+```bash
+python scripts/reference_pivot.py data/snapshots/snapshot_2026-10-26.csv
 ```
 
 ---

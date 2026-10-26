@@ -1,7 +1,7 @@
 import os
 import pytest
 import pandas as pd
-from scripts.generate_synthetic_data import create_snapshots, DEFAULT_SEED
+from scripts.generate_synthetic_data import create_snapshots, get_as_of_date, DEFAULT_SEED
 from app.quality.checker import run_quality_checks
 
 def test_quality_checks_detect_all_planted_anomalies(tmp_path):
@@ -45,7 +45,7 @@ def test_quality_clean_dataset():
             "sales_order_num": f"SO-{i:05d}",
             "coverage_id": f"COV-{i:05d}",
             "saas_acv_usd_at_plan": 10000.0,
-            "signing_date": "2025-05-15",
+            "signing_date": get_as_of_date().isoformat(),
             "country": "United States",
             "client_sub_type": "Select T Activate",
             "signing_category": "New Signings",

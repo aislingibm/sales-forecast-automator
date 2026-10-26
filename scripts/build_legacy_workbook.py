@@ -15,9 +15,12 @@ from openpyxl.utils import get_column_letter
 import pandas as pd
 
 def build_legacy_workbook(
-    csv_path: str = "data/snapshots/snapshot_2025-05-15.csv",
+    csv_path: str = None,
     output_path: str = "legacy/Daily_Forecast_LEGACY.xlsx"
 ) -> str:
+    from scripts.generate_synthetic_data import get_as_of_date, snapshot_filename
+    if csv_path is None:
+        csv_path = os.path.join("data", "snapshots", snapshot_filename(get_as_of_date()))
     # Resolve paths relative to forecast-automator root if needed
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if not os.path.isabs(csv_path):

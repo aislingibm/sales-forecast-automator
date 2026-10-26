@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import Response, StreamingResponse
 from app.ingestion.loader import get_snapshot_dataframe
+from scripts.generate_synthetic_data import get_as_of_date, previous_snapshot_date
 from app.engine.forecast import compute_forecast_from_df, compute_day_over_day_changes
 from app.engine.exporter import export_forecast_to_excel
 from app.quality.checker import run_quality_checks
@@ -129,7 +130,7 @@ def export_forecast(
 def get_quality(snapshot_date: Optional[str] = Query(None)):
     """Run data quality engine and return anomalies."""
     df_today = get_snapshot_dataframe(snapshot_date)
-    df_yesterday = get_snapshot_dataframe("2025-05-14")
+    df_yesterday = get_snapshot_dataframe(previous_snapshot_date(snapshot_date))
     
     findings = run_quality_checks(df_today=df_today, df_yesterday=df_yesterday)
     return findings
@@ -137,8 +138,8 @@ def get_quality(snapshot_date: Optional[str] = Query(None)):
 @router.get("/changes", response_model=ChangesResponse, tags=["Forecast"])
 def get_changes(since: str = Query("yesterday", description="Comparison snapshot reference")):
     """Get deals added, removed, or modified since yesterday."""
-    df_today = get_snapshot_dataframe("2025-05-15")
-    df_yesterday = get_snapshot_dataframe("2025-05-14")
+    df_today = get_snapshot_dataframe(get_as_of_date().isoformat())
+    df_yesterday = get_snapshot_dataframe(previous_snapshot_date())
     
     changes = compute_day_over_day_changes(df_today=df_today, df_yesterday=df_yesterday)
     return changes

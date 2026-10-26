@@ -34,3 +34,8 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Local tooling output and build artifacts (not source)
+.bob/
+dist/*.zip
+/synthetic-data-and-credential-scan.html

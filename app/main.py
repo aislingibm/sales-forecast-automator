@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from app.db import init_db
 from app.api.routes import router
 from app.scheduler.runner import start_scheduler, stop_scheduler, run_daily_pipeline
-from scripts.generate_synthetic_data import create_snapshots
+from scripts.generate_synthetic_data import create_snapshots, get_as_of_date, snapshot_filename
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,12 +20,13 @@ async def lifespan(app: FastAPI):
     os.makedirs(snapshots_dir, exist_ok=True)
     os.makedirs(outbox_dir, exist_ok=True)
     
-    today_csv = os.path.join(snapshots_dir, "snapshot_2025-05-15.csv")
+    as_of = get_as_of_date()
+    today_csv = os.path.join(snapshots_dir, snapshot_filename(as_of))
     if not os.path.exists(today_csv):
-        create_snapshots(count=2000, output_dir=snapshots_dir)
+        create_snapshots(count=2000, output_dir=snapshots_dir, as_of=as_of)
         
     # Run initial pipeline pass to prime DB and outbox
-    run_daily_pipeline(snapshot_date="2025-05-15", outbox_dir=outbox_dir)
+    run_daily_pipeline(snapshot_date=as_of.isoformat(), outbox_dir=outbox_dir)
     
     # Start APScheduler
     start_scheduler()

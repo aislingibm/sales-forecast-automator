@@ -85,7 +85,8 @@ def run_reference_pivot(
 
 if __name__ == "__main__":
     import sys
-    csv_file = sys.argv[1] if len(sys.argv) > 1 else "data/snapshots/snapshot_2025-05-15.csv"
+    from generate_synthetic_data import get_as_of_date, snapshot_filename
+    csv_file = sys.argv[1] if len(sys.argv) > 1 else os.path.join("data", "snapshots", snapshot_filename(get_as_of_date()))
     if not os.path.exists(csv_file):
         csv_file = os.path.join(os.path.dirname(__file__), "..", csv_file)
         
