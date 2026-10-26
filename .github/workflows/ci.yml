@@ -28,7 +28,7 @@ jobs:
 
       - name: Verify synthetic data generation determinism
         run: |
-          python scripts/generate_synthetic_data.py --rows 1000 --seed 42 --outdir data/snapshots
+          python scripts/generate_synthetic_data.py --seed 42 --outdir data/snapshots
 
       - name: Run Pytest Suite with Coverage Enforcement (>80%)
         run: |
