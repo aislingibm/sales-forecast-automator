@@ -1,0 +1,29 @@
+# Golden Report Default Filter Rules
+filters:
+  country: "United States"
+  client_sub_type: "Select T Activate"
+  signing_category: "New Signings"
+  ut_level_15_dscr: "Data Platform"
+
+# Explicit customer exclusions (replaces legacy formula hardcoding)
+excluded_customers:
+  - "Acme Test Enterprise 999"
+
+# Explicit manual adjustments (replaces legacy off-book row 18)
+manual_adjustments:
+  - description: "[Manual Adjustment] Q2 Executive Plan Catch-up (Off-book)"
+    deal_count: 1
+    acv_usd: 150000.00
+
+# Expected legacy output column structure
+output_columns:
+  - "ut_level_30_dscr"
+  - "coverage_id"
+  - "signing_date"
+  - "sales_order_num"
+  - "customer_name"
+  - "saas_acv_usd_at_plan"
+
+# Data Quality Thresholds
+quality:
+  swing_threshold_pct: 25.0

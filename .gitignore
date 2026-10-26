@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# Testing and coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+
+# Generated SQLite runtime database
+data/forecast.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Runtime outbox artifacts (keep .gitkeep)
+outbox/daily_forecast_*.xlsx
+!outbox/.gitkeep
+
+# Operating system and IDE metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,21 @@
+# Application & Scheduler Settings
+app:
+  host: "127.0.0.1"
+  port: 8000
+  database_url: "sqlite:///./data/forecast.db"
+  outbox_dir: "./outbox"
+  snapshots_dir: "./data/snapshots"
+
+scheduler:
+  enabled: true
+  cron_expression: "0 6 * * *"  # Daily at 06:00 AM
+  interval_seconds: 86400
+
+sales_cloud:
+  enabled: false  # Dormant real connector disabled by default
+  mock_enabled: true
+  per_order_tolerance_usd: 0.01
+  block_on_mismatch: false
+  max_retries: 3
+  retry_backoff_seconds: 1.0
+  retry_backoff_multiplier: 2.0

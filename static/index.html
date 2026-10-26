@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Forecast Automator</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="chart.umd.js"></script>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <div class="brand-group">
+                <div class="logo-mark">SF</div>
+                <div>
+                    <h1>Sales Forecast Automator</h1>
+                    <p class="subtitle">ATX Fall Co-Ops Bobathon · Automated Pipeline & System of Record Reconciliation</p>
+                </div>
+            </div>
+            <div class="header-status-group">
+                <div id="reconBadge" class="status-badge badge-pending" title="System of Record Reconciliation status">
+                    <span class="badge-dot"></span>
+                    <span id="reconBadgeText">Reconciling...</span>
+                </div>
+                <div id="qualityBadge" class="status-badge badge-pending" title="Data Quality validation status">
+                    <span class="badge-dot"></span>
+                    <span id="qualityBadgeText">Quality Checking...</span>
+                </div>
+                <button id="btnExportXlsx" class="btn btn-primary" onclick="exportData('xlsx')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Export Excel (.xlsx)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- Filter Controls -->
+        <section class="filters-card" aria-label="Forecast filter controls">
+            <div class="filters-header">
+                <h2>Forecast Filter Rules</h2>
+                <button class="btn btn-sm btn-ghost" onclick="resetFilters()">Reset to Golden Rules</button>
+            </div>
+            <form id="filterForm" class="filter-grid" onsubmit="event.preventDefault(); applyFilters();">
+                <div class="filter-field">
+                    <label for="filterCountry">Country</label>
+                    <select id="filterCountry">
+                        <option value="United States" selected>United States</option>
+                        <option value="Canada">Canada</option>
+                        <option value="United Kingdom">United Kingdom</option>
+                        <option value="Germany">Germany</option>
+                        <option value="Japan">Japan</option>
+                        <option value="ALL">All Countries</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="filterClientSubType">Client Sub-Type</label>
+                    <select id="filterClientSubType">
+                        <option value="Select T Activate" selected>Select T Activate</option>
+                        <option value="Commercial Growth">Commercial Growth</option>
+                        <option value="Enterprise Strategic">Enterprise Strategic</option>
+                        <option value="Midmarket Pilot">Midmarket Pilot</option>
+                        <option value="ALL">All Client Types</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="filterSigningCat">Signing Category</label>
+                    <select id="filterSigningCat">
+                        <option value="New Signings" selected>New Signings</option>
+                        <option value="Renewals">Renewals</option>
+                        <option value="Expansions">Expansions</option>
+                        <option value="ALL">All Categories</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="filterUt15">Product Area (UT15)</label>
+                    <select id="filterUt15">
+                        <option value="Data Platform" selected>Data Platform</option>
+                        <option value="Automation">Automation</option>
+                        <option value="Security">Security</option>
+                        <option value="Sustainability">Sustainability</option>
+                        <option value="ALL">All Product Areas</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="filterGroupBy">Time Grain / Dimension</label>
+                    <select id="filterGroupBy">
+                        <option value="day" selected>Daily Timeline</option>
+                        <option value="week">Weekly Aggregate</option>
+                        <option value="month">Monthly Aggregate</option>
+                        <option value="quarter">Quarterly Aggregate</option>
+                        <option value="ut_level_30">Product Detail (UT30)</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-secondary">Apply Filters</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- KPI Summary Cards -->
+        <section class="kpi-grid" aria-label="Key Performance Indicators">
+            <div class="kpi-card">
+                <span class="kpi-label">Total New Signings ACV</span>
+                <span id="kpiTotalAcv" class="kpi-value">$0.00</span>
+                <span class="kpi-hint">Annual Contract Value (USD)</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Deal Count</span>
+                <span id="kpiDealCount" class="kpi-value">0</span>
+                <span class="kpi-hint">Filtered Bookings</span>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Average Deal Size</span>
+                <span id="kpiAvgDealSize" class="kpi-value">$0.00</span>
+                <span class="kpi-hint">Mean ACV / Contract</span>
+            </div>
+            <div class="kpi-card" id="cardDodDelta">
+                <span class="kpi-label">Change vs. Yesterday</span>
+                <span id="kpiDodDelta" class="kpi-value">$0.00</span>
+                <span id="kpiDodPct" class="kpi-hint">0.0% DoD swing</span>
+            </div>
+        </section>
+
+        <!-- Chart Section -->
+        <section class="chart-section-card">
+            <div class="card-header-flex">
+                <div>
+                    <h2>Forecast Trajectory & Product Breakdown</h2>
+                    <p class="text-muted">Click any bar or slice to drill down into specific underlying deals</p>
+                </div>
+                <div id="activeDrillFilter" class="drill-tag" style="display: none;">
+                    <span id="drillFilterText">Filtered: None</span>
+                    <button class="btn-clear-drill" onclick="clearDrillDown()">✕ Clear</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="forecastChart" height="90"></canvas>
+            </div>
+        </section>
+
+        <!-- Audit & Diagnostics Tabs -->
+        <section class="diagnostics-card">
+            <div class="tabs-nav" role="tablist">
+                <button class="tab-btn active" role="tab" onclick="switchTab('tab-deals')">Deals Explorer</button>
+                <button class="tab-btn" role="tab" onclick="switchTab('tab-recon')">Sales Cloud Reconciliation</button>
+                <button class="tab-btn" role="tab" onclick="switchTab('tab-quality')">Data Quality Findings</button>
+                <button class="tab-btn" role="tab" onclick="switchTab('tab-changes')">Day-over-Day Changes</button>
+            </div>
+
+            <!-- TAB 1: Deals Table -->
+            <div id="tab-deals" class="tab-pane active">
+                <div class="table-toolbar">
+                    <input type="text" id="dealSearchInput" class="search-input" placeholder="Search deals by order #, customer, or product..." oninput="handleDealSearch()">
+                    <span id="tableCountBadge" class="table-count-badge">Showing 0 deals</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="dealsTable">
+                        <thead>
+                            <tr>
+                                <th onclick="sortDeals('sales_order_num')">Sales Order #</th>
+                                <th onclick="sortDeals('signing_date')">Signing Date</th>
+                                <th onclick="sortDeals('customer_name')">Customer Name</th>
+                                <th onclick="sortDeals('ut_level_30_dscr')">Product (UT30)</th>
+                                <th onclick="sortDeals('coverage_id')">Coverage ID</th>
+                                <th class="text-right" onclick="sortDeals('saas_acv_usd_at_plan')">ACV (USD)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dealsTableBody">
+                            <tr><td colspan="6" class="text-center">Loading deals...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 2: Reconciliation -->
+            <div id="tab-recon" class="tab-pane">
+                <div class="recon-summary-box" id="reconSummaryBox">
+                    Loading reconciliation data...
+                </div>
+                <div class="table-responsive" style="margin-top: 1rem;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Forecast ACV</th>
+                                <th>Sales Cloud ACV</th>
+                                <th>Variance Type</th>
+                                <th>Resolution Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reconDetailsBody">
+                            <tr><td colspan="6" class="text-center">No reconciliation variances.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 3: Quality -->
+            <div id="tab-quality" class="tab-pane">
+                <div id="qualitySummaryBox" class="quality-summary-box">
+                    Loading data quality audit...
+                </div>
+            </div>
+
+            <!-- TAB 4: Changes -->
+            <div id="tab-changes" class="tab-pane">
+                <div id="changesSummaryBox" class="changes-summary-box">
+                    Loading day-over-day changes...
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>Sales Forecast Automator · Synthetic Demo Build · All data strictly synthetic</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
